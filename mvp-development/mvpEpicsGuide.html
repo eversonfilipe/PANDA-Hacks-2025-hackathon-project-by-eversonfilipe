@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPICS & MVPs Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .spreadsheet-container {
+            overflow-x: auto;
+            background: #f8f9fa;
+        }
+
+        .spreadsheet {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        .spreadsheet th {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            color: white;
+            padding: 15px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-right: 1px solid #34495e;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .spreadsheet td {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            border-right: 1px solid #dee2e6;
+            vertical-align: top;
+            line-height: 1.6;
+        }
+
+        .epic-row {
+            background: #ffffff;
+        }
+
+        .epic-row:hover {
+            background: #f1f3f4;
+            transform: scale(1.001);
+            transition: all 0.3s ease;
+        }
+
+        .epic-number {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .epic-title {
+            font-weight: 600;
+            color: #2980b9;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+        }
+
+        .epic-description {
+            color: #555;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+
+        .value-prop {
+            background: #e8f4fd;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            font-size: 0.9rem;
+            color: #2c3e50;
+        }
+
+        .mvp-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .mvp-list li {
+            background: #f8f9fa;
+            margin: 8px 0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-left: 3px solid #27ae60;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+        }
+
+        .mvp-list li:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .mvp-list li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .navigation-tabs {
+            display: flex;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 20px;
+            text-align: center;
+            background: #ecf0f1;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab:hover, .nav-tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .search-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .spreadsheet th,
+            .spreadsheet td {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .navigation-tabs {
+                flex-direction: column;
+            }
+        }
+
+        .highlight {
+            background: #fff3cd !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>CORE FEATURES (EPICS) & MVP DASHBOARD</h1>
+            <p>Comprehensive visualization of development priorities and deliverables</p>
+        </div>
+
+        <div class="navigation-tabs">
+            <button class="nav-tab active" onclick="filterTable('all')">All EPICs</button>
+            <button class="nav-tab" onclick="filterTable('epic1')">Content Engine</button>
+            <button class="nav-tab" onclick="filterTable('epic2')">Teacher Module</button>
+            <button class="nav-tab" onclick="filterTable('epic3')">Analytics</button>
+            <button class="nav-tab" onclick="filterTable('epic4')">Interface</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-box" placeholder="Search EPICs and MVPs..." oninput="searchTable(this.value)">
+        </div>
+
+        <div class="spreadsheet-container">
+            <table class="spreadsheet">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">EPIC #</th>
+                        <th style="width: 25%;">TITLE & DESCRIPTION</th>
+                        <th style="width: 25%;">VALUE PROPOSITION</th>
+                        <th style="width: 42%;">MVP DELIVERABLES (HACKATHON)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="epic-row" data-epic="epic1">
+                        <td class="epic-number">EPIC 1</td>
+                        <td>
+                            <div class="epic-title">AI-Powered Content Personalization & Adaptation Engine</div>
+                            <div class="epic-description">
+                                Develop a robust backend system that leverages AI/ML (NLP for text, computer vision for visual content) to analyze educational materials and student performance data. It will suggest or automatically adapt content difficulty, format, and examples based on individual student learning styles, pace, and curiosity triggers.
+                            </div>
+                        </td>
+                        <td>
+                            <div class="value-prop">
+                                Directly addresses the "Personalized Learning Gap" by delivering tailored content. Empowers teachers by giving them control over AI adaptations, building confidence and fostering AI literacy through practical application.
+                            </div>
+                        </td>
+                        <td>
+                            <ul class="mvp-list">
+                                <li>Basic content ingestion (text-based lessons)</li>
+                                <li>Rule-based personalization (simplify vocabulary, add examples)</li>
+                                <li>Teacher-facing dashboard for content review</li>
+                                <li>Simple analytics on student engagement with personalized content</li>
+                            </ul>
+                        </td>
+                    </tr>
+
+                    <tr class="epic-row" data-epic="epic2">
+                        <td class="epic-number">EPIC 2</td>
+                        <td>
+                            <div class="epic-title">Interactive Teacher AI Literacy & Support Module</div>
+                            <div class="epic-description">
+                                Create an in-platform, gamified learning module for teachers, focusing on foundational AI literacy and pedagogical integration strategies. Includes interactive tutorials, mini-challenges, and practical scenarios with real-time feedback and community forum support.
+                            </div>
+                        </td>
+                        <td>
+                            <div class="value-prop">
+                                Directly addresses the root cause by systematically building teacher AI literacy. Reduces resistance to change and increases adoption rates of AI tools in the classroom. Provides sustained support.
+                            </div>
+                        </td>
+                        <td>
+                            <ul class="mvp-list">
+                                <li>Interactive introductory course on "AI for Personalized Learning"</li>
+                                <li>Guided walk-throughs for core platform features</li>
+                                <li>Integrated chat/forum for teacher questions and collaboration</li>
+                                <li>Progress tracking for teacher learning modules</li>
+                            </ul>
+                        </td>
+                    </tr>
+
+                    <tr class="epic-row" data-epic="epic3">
+                        <td class="epic-number">EPIC 3</td>
+                        <td>
+                            <div class="epic-title">Student Progress & Engagement Analytics Dashboard</div>
+                            <div class="epic-description">
+                                Design a user-friendly dashboard for teachers that visualizes student progress and engagement with personalized content. Provides actionable insights into learning patterns, areas of struggle, and curiosity spikes with privacy-first principles.
+                            </div>
+                        </td>
+                        <td>
+                            <div class="value-prop">
+                                Enables teachers to monitor the effectiveness of personalized learning. Facilitates data-driven decision-making to optimize teaching strategies and provide targeted support, especially for under-resourced students.
+                            </div>
+                        </td>
+                        <td>
+                            <ul class="mvp-list">
+                                <li>Visual representation of content completion and quiz scores</li>
+                                <li>Identification of "struggling" or "highly engaged" students</li>
+                                <li>Basic filters (by class, by topic)</li>
+                                <li>Exportable reports for administrative use</li>
+                            </ul>
+                        </td>
+                    </tr>
+
+                    <tr class="epic-row" data-epic="epic4">
+                        <td class="epic-number">EPIC 4</td>
+                        <td>
+                            <div class="epic-title">Accessible Interface & Offline/Low-Connectivity Support</div>
+                            <div class="epic-description">
+                                Prioritize a clean, intuitive user interface for both teachers and students, designed for simplicity. Implement robust offline-first or low-connectivity mode to ensure access in under-resourced districts with unreliable internet.
+                            </div>
+                        </td>
+                        <td>
+                            <div class="value-prop">
+                                Directly addresses the "Solution Access" gap for low-income students in under-resourced districts. Ensures inclusivity and usability for all users, regardless of technological infrastructure limitations. Aligns with ESG by promoting digital equity.
+                            </div>
+                        </td>
+                        <td>
+                            <ul class="mvp-list">
+                                <li>Responsive web interface for desktop and mobile browsers</li>
+                                <li>Offline access to pre-downloaded content/assignments</li>
+                                <li>Progress synchronization when connectivity is restored</li>
+                                <li>Clear, minimal design following accessibility guidelines</li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function filterTable(filter) {
+            const rows = document.querySelectorAll('.epic-row');
+            const tabs = document.querySelectorAll('.nav-tab');
+            
+            // Update active tab
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter rows
+            rows.forEach(row => {
+                if (filter === 'all' || row.dataset.epic === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function searchTable(searchTerm) {
+            const rows = document.querySelectorAll('.epic-row');
+            const searchLower = searchTerm.toLowerCase();
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    row.style.display = '';
+                    // Highlight matching text
+                    if (searchTerm.length > 2) {
+                        row.classList.add('highlight');
+                    } else {
+                        row.classList.remove('highlight');
+                    }
+                } else {
+                    row.style.display = 'none';
+                    row.classList.remove('highlight');
+                }
+            });
+        }
+
+        // Add smooth scrolling and hover effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('.epic-row');
+            rows.forEach(row => {
+                row.addEventListener('mouseenter', function() {
+                    this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                });
+                row.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
